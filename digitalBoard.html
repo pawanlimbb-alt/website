@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 
+
+  <script src="Component.js" defer></script>
+
 <!-- ╔══════════════════════════════════════════════════════════════════╗
      ║  🔧  FIREBASE CONFIG — replace with your project values         ║
      ║  (Same project as logandblog is fine — uses its own collections)║
@@ -126,7 +129,7 @@ body{
 }
 
 /* ═══════════════ NAV ═══════════════ */
-nav{
+/* nav{
   position:sticky;top:0;left:0;right:0;z-index:200;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 2rem;height:56px;
@@ -151,7 +154,7 @@ nav{
   font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:1px;
   cursor:pointer;transition:background .2s;
 }
-.nav-cta:hover{background:#c4510a;}
+.nav-cta:hover{background:#c4510a;} */
 
 /* ═══════════════ BOARD HEADER ═══════════════ */
 .board-head{
@@ -627,17 +630,8 @@ nav{
 <div class="toast" id="toast"></div>
 
 <!-- ═══════════════ NAV ═══════════════ -->
-<nav>
-  <div class="nav-logo" onclick="location.href='index.html'">
-    <span class="nl">CHE</span><span class="nb">ENO</span>
-  </div>
-  <div class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="movies.html">Movies</a>
-    <a class="active">Query Board</a>
-  </div>
-  <button class="nav-cta" onclick="openCompose()">+ Post a query</button>
-</nav>
+<!-- CHEENO header (injected by components.js) -->
+<header data-cheeno-header></header>
 
 <!-- ═══════════════ BOARD HEADER ═══════════════ -->
 <header class="board-head">
@@ -753,6 +747,8 @@ nav{
     </div>
   </div>
 </div>
+<!-- CHEENO footer (injected by components.js) -->
+<footer data-cheeno-footer></footer>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
