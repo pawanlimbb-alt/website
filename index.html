@@ -258,13 +258,13 @@ footer{background:var(--cork-dark);color:#D8CBB4;padding:3.5rem 0 2rem;}
 <!-- ══════════════════════ HERO ══════════════════════ -->
 <header class="hero wrap">
   <div class="hero-copy">
-    <span class="eyebrow">For verified students &amp; faculty of your university</span>
+    <span class="eyebrow" id="hero-eyebrow">For verified students &amp; faculty of your university</span>
     <h1 style="margin-top:.6rem;">
       <span>Your campus,</span>
       <span class="c1">pinned</span>
       <span>in <span class="c2">one place.</span></span>
     </h1>
-    <p>Find people who share your skills and hobbies, ask your batch a question on the board, see where you rank — and tell faculty what you really think, without your name attached.</p>
+    <p id="hero-description">Find people who share your skills and hobbies, ask your batch a question on the board, see where you rank — and tell faculty what you really think, without your name attached.</p>
     <div class="hero-btns">
       <button class="btn btn-pin" onclick="document.getElementById('discover').scrollIntoView({behavior:'smooth'})">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="#fff" stroke-width="1.6"/><path d="M12 12l2.5 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -272,10 +272,8 @@ footer{background:var(--cork-dark);color:#D8CBB4;padding:3.5rem 0 2rem;}
       </button>
       <button class="btn btn-tape" onclick="document.getElementById('board').scrollIntoView({behavior:'smooth'})">Browse the board</button>
     </div>
-    <div class="hero-meta">
-      <div><b>1,240</b>profiles on campus</div>
-      <div><b>380</b>questions answered this term</div>
-      <div><b>96%</b>feedback delivered anonymously</div>
+    <div class="hero-meta" id="hero-stats">
+      <!-- Stats loaded dynamically via JS -->
     </div>
   </div>
 
@@ -351,17 +349,13 @@ footer{background:var(--cork-dark);color:#D8CBB4;padding:3.5rem 0 2rem;}
       <div class="field">
         <label for="fb-faculty">Send to</label>
         <select id="fb-faculty">
-          <option>Dr. Meera Iyer — Data Structures</option>
-          <option>Prof. Arjun Nair — Thermodynamics</option>
-          <option>Dr. Priya Menon — Robotics Cell</option>
+          <!-- Options loaded dynamically -->
         </select>
       </div>
       <div class="field">
         <label for="fb-category">Category</label>
         <select id="fb-category">
-          <option>Teaching feedback</option>
-          <option>Suggestion</option>
-          <option>Complaint</option>
+          <!-- Options loaded dynamically -->
         </select>
       </div>
       <div class="field">
@@ -422,7 +416,9 @@ footer{background:var(--cork-dark);color:#D8CBB4;padding:3.5rem 0 2rem;}
     </div>
     <div class="field"><label for="p-title">Title</label><input id="p-title" type="text" placeholder="What do you want to ask or share?"></div>
     <div class="field"><label for="p-category">Category</label>
-      <select id="p-category"><option>Academics</option><option>Events</option><option>Housing</option><option>Lost &amp; Found</option><option>General</option></select>
+      <select id="p-category">
+        <!-- Options loaded dynamically -->
+      </select>
     </div>
     <div class="field"><label for="p-body">Details</label><textarea id="p-body" placeholder="Add context so people can actually help..."></textarea></div>
     <button class="btn btn-pin" style="width:100%;justify-content:center;" onclick="publishPost()">Pin it to the board</button>
@@ -430,130 +426,238 @@ footer{background:var(--cork-dark);color:#D8CBB4;padding:3.5rem 0 2rem;}
 </div>
 
 <script>
-/* ── DEMO DATA (in-memory only — no backend wired up yet) ─────────── */
-const departments = ['All','CSE','ECE','Mech','Design'];
-let activeDept = 'All';
-
-const students = [
-  {name:'Rhea Kapoor', dept:'CSE', year:'3rd yr · CSE', tags:['react','ml','football'], match:92, init:'RK'},
-  {name:'Aman Sethi', dept:'ECE', year:'2nd yr · ECE', tags:['embedded','guitar','robotics'], match:81, init:'AS'},
-  {name:'Nivedita Rao', dept:'Design', year:'4th yr · Design', tags:['figma','illustration','ux'], match:77, init:'NR'},
-  {name:'Kabir Malhotra', dept:'CSE', year:'1st yr · CSE', tags:['dsa','chess','python'], match:88, init:'KM'},
-  {name:'Sana Fernandes', dept:'Mech', year:'3rd yr · Mech', tags:['cad','badminton','ev'], match:74, init:'SF'},
-  {name:'Yusuf Ali', dept:'ECE', year:'2nd yr · ECE', tags:['iot','photography','arduino'], match:69, init:'YA'},
-];
-
-const boardCategories = ['All','Academics','Events','Housing'];
-let activeBoardCat = 'All';
-let boardPosts = [
-  {cat:'Academics', title:'Anyone have last year\'s DBMS mid-sem paper?', body:'Prof said the pattern repeats — trying to compare notes before Friday.', votes:24, answers:6},
-  {cat:'Events', title:'Robotics Cell demo day moved to Hall 2', body:'Same time, new venue — bring your own extension board if you\'re presenting.', votes:15, answers:2},
-  {cat:'Housing', title:'Looking for a 3rd flatmate near North Gate', body:'2BHK, already split with one senior, rent negotiable for the right person.', votes:9, answers:11},
-];
-
-const rankCategories = ['Overall','Academics','Projects','Community','Coding'];
-let activeRankCat = 'Overall';
-const rankings = {
-  Overall:[['Priya S.','CSE, 4th yr',1420],['Devansh R.','ECE, 3rd yr',1310],['Meher K.','Mech, 3rd yr',1185],['Ira Bhatt','Design, 2nd yr',1040],['Omkar J.','CSE, 3rd yr',980]],
-  Academics:[['Meher K.','Mech, 3rd yr',640],['Priya S.','CSE, 4th yr',590],['Rohan T.','ECE, 2nd yr',540],['Ira Bhatt','Design, 2nd yr',505],['Devansh R.','ECE, 3rd yr',470]],
-  Projects:[['Devansh R.','ECE, 3rd yr',560],['Priya S.','CSE, 4th yr',510],['Omkar J.','CSE, 3rd yr',430],['Sana F.','Mech, 3rd yr',390],['Kabir M.','CSE, 1st yr',350]],
-  Community:[['Ira Bhatt','Design, 2nd yr',420],['Priya S.','CSE, 4th yr',360],['Yusuf A.','ECE, 2nd yr',330],['Meher K.','Mech, 3rd yr',300],['Rhea K.','CSE, 3rd yr',270]],
-  Coding:[['Kabir M.','CSE, 1st yr',480],['Devansh R.','ECE, 3rd yr',450],['Priya S.','CSE, 4th yr',420],['Aman S.','ECE, 2nd yr',360],['Omkar J.','CSE, 3rd yr',310]],
+/* ── CONFIG: API ENDPOINTS ──────────────────────────────────────── */
+const API = {
+  stats:          '/api/stats',
+  students:       '/api/students',
+  departments:    '/api/departments',
+  boardCategories:'/api/board/categories',
+  boardPosts:     '/api/board/posts',
+  rankCategories: '/api/rankings/categories',
+  rankings:       '/api/rankings',
+  faculty:        '/api/faculty',
+  feedbackTargets:'/api/faculty/feedback-targets',
+  feedbackCategories: '/api/feedback/categories'
 };
 
-const faculty = [
-  {name:'Dr. Meera Iyer', dept:'Data Structures · CSE', expertise:'Office hours Tue/Thu, 3–4pm · Room 214', init:'MI'},
-  {name:'Prof. Arjun Nair', dept:'Thermodynamics · Mech', expertise:'Office hours Mon/Wed, 11am–12pm · Room 108', init:'AN'},
-  {name:'Dr. Priya Menon', dept:'Robotics Cell · Advisor', expertise:'Drop-in Fridays, 2–5pm · Robotics Lab', init:'PM'},
-];
+/* ── STATE ────────────────────────────────────────────────────────── */
+let departments = [];
+let activeDept = 'All';
+let students = [];
+
+let boardCategories = [];
+let activeBoardCat = 'All';
+let boardPosts = [];
+
+let rankCategories = [];
+let activeRankCat = 'Overall';
+let rankings = {};
+
+let faculty = [];
+
+/* ── GENERIC FETCH HELPER ────────────────────────────────────────── */
+async function fetchJSON(url, fallback = []) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn(`Failed to load ${url}:`, err);
+    return fallback;
+  }
+}
+
+/* ── RENDER: STATS (hero meta) ──────────────────────────────────── */
+async function loadStats() {
+  const stats = await fetchJSON(API.stats, []);
+  const container = document.getElementById('hero-stats');
+  if (!stats.length) { container.innerHTML = ''; return; }
+  container.innerHTML = stats.map(s =>
+    `<div><b>${s.value ?? ''}</b>${s.label ?? ''}</div>`
+  ).join('');
+}
 
 /* ── RENDER: DISCOVERY ─────────────────────────────────────────── */
+async function loadDepartments() {
+  departments = await fetchJSON(API.departments, []);
+  if (!departments.length) departments = ['All'];
+  renderFilters();
+}
+
 function renderFilters(){
   const row = document.getElementById('filter-row');
+  if (!departments.length) { row.innerHTML = ''; return; }
   row.innerHTML = departments.map(d =>
     `<button class="pill ${d===activeDept?'active':''}" onclick="setDept('${d}')">${d}</button>`).join('');
 }
-window.setDept = function(d){ activeDept = d; renderFilters(); renderDiscovery(); };
+window.setDept = function(d){ activeDept = d; renderFilters(); loadStudents(); };
+
+async function loadStudents() {
+  const params = activeDept !== 'All' ? `?department=${encodeURIComponent(activeDept)}` : '';
+  students = await fetchJSON(API.students + params, []);
+  renderDiscovery();
+}
 
 function renderDiscovery(){
   const grid = document.getElementById('discover-grid');
-  const list = students.filter(s => activeDept==='All' || s.dept===activeDept);
-  grid.innerHTML = list.map(s => `
+  if (!students.length) {
+    grid.innerHTML = `<p style="color:var(--muted);">No profiles match that filter yet.</p>`;
+    return;
+  }
+  grid.innerHTML = students.map(s => `
     <div class="id-card">
       <div class="pin-dot blue"></div>
       <div class="id-top">
-        <div class="id-avatar">${s.init}</div>
-        <span class="match-badge">${s.match}% match</span>
+        <div class="id-avatar">${s.init || s.initials || ''}</div>
+        <span class="match-badge">${s.match != null ? s.match + '% match' : ''}</span>
       </div>
-      <h3>${s.name}</h3>
-      <div class="role">${s.year}</div>
-      <div class="tag-row">${s.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-    </div>`).join('') || `<p style="color:var(--muted);">No profiles match that filter yet.</p>`;
+      <h3>${s.name || ''}</h3>
+      <div class="role">${s.year || s.role || ''}</div>
+      <div class="tag-row">${(s.tags || []).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    </div>`).join('');
 }
 
 /* ── RENDER: BOARD ──────────────────────────────────────────────── */
+async function loadBoardCategories() {
+  boardCategories = await fetchJSON(API.boardCategories, []);
+  if (!boardCategories.length) boardCategories = ['All'];
+  renderBoardFilter();
+}
+
 function renderBoardFilter(){
-  document.getElementById('board-filter').innerHTML = boardCategories.map(c =>
+  const el = document.getElementById('board-filter');
+  if (!boardCategories.length) { el.innerHTML = ''; return; }
+  el.innerHTML = boardCategories.map(c =>
     `<button class="pill ${c===activeBoardCat?'active':''}" onclick="setBoardCat('${c}')">${c}</button>`).join('');
 }
-window.setBoardCat = function(c){ activeBoardCat = c; renderBoardFilter(); renderBoard(); };
+window.setBoardCat = function(c){ activeBoardCat = c; renderBoardFilter(); loadBoardPosts(); };
+
+async function loadBoardPosts() {
+  const params = activeBoardCat !== 'All' ? `?category=${encodeURIComponent(activeBoardCat)}` : '';
+  boardPosts = await fetchJSON(API.boardPosts + params, []);
+  renderBoard();
+}
 
 function renderBoard(){
   const grid = document.getElementById('board-grid');
-  const list = boardPosts.filter(p => activeBoardCat==='All' || p.cat===activeBoardCat);
-  grid.innerHTML = list.map((p,i) => `
+  if (!boardPosts.length) {
+    grid.innerHTML = `<p style="color:var(--muted);">No posts in this category yet.</p>`;
+    return;
+  }
+  grid.innerHTML = boardPosts.map((p, i) => `
     <div class="post-card">
       <div class="pin-dot"></div>
-      <span class="cat-tag">${p.cat}</span>
-      <h3>${p.title}</h3>
-      <p>${p.body}</p>
+      <span class="cat-tag">${p.cat || ''}</span>
+      <h3>${p.title || ''}</h3>
+      <p>${p.body || ''}</p>
       <div class="post-foot">
-        <button class="upvote-btn" onclick="upvote(${boardPosts.indexOf(p)}, this)">
+        <button class="upvote-btn" onclick="upvote(${i}, this)">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5 11 8H2l4.5-6.5Z" fill="currentColor"/></svg>
-          <span>${p.votes}</span>
+          <span>${p.votes || 0}</span>
         </button>
-        <span class="answers-count">${p.answers} answers</span>
+        <span class="answers-count">${p.answers || 0} answers</span>
       </div>
     </div>`).join('');
 }
+
 window.upvote = function(idx, el){
-  boardPosts[idx].votes++;
-  el.classList.add('voted');
-  el.querySelector('span').textContent = boardPosts[idx].votes;
+  if (boardPosts[idx]) {
+    boardPosts[idx].votes = (boardPosts[idx].votes || 0) + 1;
+    el.classList.add('voted');
+    el.querySelector('span').textContent = boardPosts[idx].votes;
+  }
 };
 
 /* ── RENDER: RANKINGS ───────────────────────────────────────────── */
+async function loadRankCategories() {
+  rankCategories = await fetchJSON(API.rankCategories, []);
+  if (!rankCategories.length) rankCategories = ['Overall'];
+  renderRankTabs();
+}
+
 function renderRankTabs(){
-  document.getElementById('rank-tabs').innerHTML = rankCategories.map(c =>
+  const el = document.getElementById('rank-tabs');
+  if (!rankCategories.length) { el.innerHTML = ''; return; }
+  el.innerHTML = rankCategories.map(c =>
     `<button class="rank-tab ${c===activeRankCat?'active':''}" onclick="setRankCat('${c}')">${c}</button>`).join('');
 }
-window.setRankCat = function(c){ activeRankCat = c; renderRankTabs(); renderRankList(); };
+window.setRankCat = function(c){ activeRankCat = c; renderRankTabs(); loadRankings(); };
+
+async function loadRankings() {
+  const params = activeRankCat ? `?category=${encodeURIComponent(activeRankCat)}` : '';
+  const data = await fetchJSON(API.rankings + params, []);
+  rankings[activeRankCat] = Array.isArray(data) ? data : (data.items || []);
+  renderRankList();
+}
 
 function renderRankList(){
-  const list = rankings[activeRankCat];
-  document.getElementById('rank-list').innerHTML = list.map((r,i) => `
-    <div class="rank-row">
-      <span class="rank-num">${i+1}</span>
-      <span><span class="rank-name">${r[0]}</span><span class="rank-dept">${r[1]}</span></span>
-      <span class="rank-pts">${r[2]} pts</span>
-      <button class="rank-link" onclick="alert('Breakdown for ${r[0]}: shows every event that earned these points.')">breakdown</button>
-    </div>`).join('');
+  const list = rankings[activeRankCat] || [];
+  const el = document.getElementById('rank-list');
+  if (!list.length) {
+    el.innerHTML = `<p style="color:#C9BBA0;text-align:center;">No ranking data available.</p>`;
+    return;
+  }
+  el.innerHTML = list.map((r, i) => {
+    const name = r.name || r[0] || '';
+    const dept = r.dept || r[1] || '';
+    const pts  = r.points != null ? r.points : (r[2] != null ? r[2] : 0);
+    return `
+      <div class="rank-row">
+        <span class="rank-num">${i+1}</span>
+        <span><span class="rank-name">${name}</span><span class="rank-dept">${dept}</span></span>
+        <span class="rank-pts">${pts} pts</span>
+        <button class="rank-link" onclick="alert('Breakdown for ${name}: shows every event that earned these points.')">breakdown</button>
+      </div>`;
+  }).join('');
 }
 
 /* ── RENDER: FACULTY ────────────────────────────────────────────── */
+async function loadFaculty() {
+  faculty = await fetchJSON(API.faculty, []);
+  renderFaculty();
+  populateFeedbackTargets();
+}
+
 function renderFaculty(){
-  document.getElementById('fac-list').innerHTML = faculty.map(f => `
+  const el = document.getElementById('fac-list');
+  if (!faculty.length) {
+    el.innerHTML = `<p style="color:var(--muted);">No faculty office hours posted.</p>`;
+    return;
+  }
+  el.innerHTML = faculty.map(f => `
     <div class="fac-card">
-      <div class="fac-avatar">${f.init}</div>
+      <div class="fac-avatar">${f.init || f.initials || ''}</div>
       <div class="fac-info">
-        <h3>${f.name}</h3>
-        <div class="role">${f.dept}</div>
-        <div class="expertise">${f.expertise}</div>
+        <h3>${f.name || ''}</h3>
+        <div class="role">${f.dept || ''}</div>
+        <div class="expertise">${f.expertise || f.officeHours || ''}</div>
       </div>
     </div>`).join('');
 }
 
 /* ── FEEDBACK FORM ──────────────────────────────────────────────── */
+async function populateFeedbackTargets() {
+  const targets = await fetchJSON(API.feedbackTargets, faculty);
+  const select = document.getElementById('fb-faculty');
+  if (!select) return;
+  const list = Array.isArray(targets) && targets.length ? targets : faculty;
+  select.innerHTML = list.map(f => {
+    const label = f.label || `${f.name || ''} — ${f.dept || ''}`;
+    return `<option value="${f.id || f.name || ''}">${label}</option>`;
+  }).join('');
+}
+
+async function loadFeedbackCategories() {
+  const cats = await fetchJSON(API.feedbackCategories, []);
+  const select = document.getElementById('fb-category');
+  if (!select) return;
+  if (!cats.length) { select.innerHTML = ''; return; }
+  select.innerHTML = cats.map(c => {
+    const label = typeof c === 'string' ? c : (c.label || c.name || '');
+    return `<option>${label}</option>`;
+  }).join('');
+}
+
 window.submitFeedback = function(){
   const body = document.getElementById('fb-body').value.trim();
   const confirmEl = document.getElementById('fb-confirm');
@@ -567,14 +671,27 @@ window.openPostModal = () => document.getElementById('post-overlay').classList.a
 window.closePostModal = () => document.getElementById('post-overlay').classList.remove('open');
 document.getElementById('post-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closePostModal(); });
 
-window.publishPost = function(){
+async function populatePostCategories() {
+  const cats = await fetchJSON(API.boardCategories, []);
+  const select = document.getElementById('p-category');
+  if (!select) return;
+  const list = cats.filter(c => c.toLowerCase() !== 'all');
+  if (!list.length) { select.innerHTML = ''; return; }
+  select.innerHTML = list.map(c => `<option>${c}</option>`).join('');
+}
+
+window.publishPost = async function(){
   const title = document.getElementById('p-title').value.trim();
   const cat = document.getElementById('p-category').value;
   const body = document.getElementById('p-body').value.trim();
   if (!title || !body){ return; }
+
+  // Optimistically add to the board (will be replaced on next fetch)
   boardPosts.unshift({cat, title, body, votes:0, answers:0});
   activeBoardCat = 'All';
-  renderBoardFilter(); renderBoard();
+  renderBoardFilter();
+  renderBoard();
+
   document.getElementById('p-title').value='';
   document.getElementById('p-body').value='';
   closePostModal();
@@ -582,16 +699,34 @@ window.publishPost = function(){
 };
 
 /* ── INIT ───────────────────────────────────────────────────────── */
-renderFilters(); renderDiscovery();
-renderBoardFilter(); renderBoard();
-renderRankTabs(); renderRankList();
-renderFaculty();
+async function init() {
+  // Load everything in parallel
+  await Promise.all([
+    loadStats(),
+    loadDepartments(),
+    loadBoardCategories(),
+    loadRankCategories(),
+    loadFaculty(),
+    loadFeedbackCategories(),
+    populatePostCategories()
+  ]);
+
+  // Load dependent data
+  await Promise.all([
+    loadStudents(),
+    loadBoardPosts(),
+    loadRankings()
+  ]);
+}
 
 /* ── SCROLL REVEAL ──────────────────────────────────────────────── */
 const obs = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
 }), {threshold:.08});
 document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+
+/* ── KICK OFF ───────────────────────────────────────────────────── */
+init();
 </script>
 </body>
 </html>
