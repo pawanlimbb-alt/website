@@ -3,14 +3,1096 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About Pawan Limbu | Personal Portfolio</title>
+<title>LOG & BLOG — A place to open up.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+<!-- ╔══════════════════════════════════════════════════════════════════╗
+     ║  🔧  STEP 1 — PASTE YOUR FIREBASE CONFIG BELOW                 ║
+     ║  Firebase Console → Project Settings → Your apps → Config       ║
+     ╚══════════════════════════════════════════════════════════════════╝ -->
+<script type="module">
+  import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs,
+    query, orderBy, limit, serverTimestamp,
+    doc, updateDoc, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  /* ── 🔑 YOUR FIREBASE CONFIG ─────────────────────────────────────
+     Replace every value below with the real values from your project.
+     ──────────────────────────────────────────────────────────────── */
+  const firebaseConfig = {
+  apiKey: "AIzaSyCT9wFpdCR49DElH5kFBX3N1qKFLzqYQCE",
+  authDomain: "logandblog-ecdc8.firebaseapp.com",
+  projectId: "logandblog-ecdc8",
+  storageBucket: "logandblog-ecdc8.firebasestorage.app",
+  messagingSenderId: "831378093415",
+  appId: "1:831378093415:web:cb86592345cd24e6216bc2",
+  measurementId: "G-4XTHGZ90JT"
+};
+
+  /* ── ☁️  YOUR CLOUDINARY CONFIG ──────────────────────────────────
+     Dashboard → top-left: Cloud Name
+     Settings → Upload → Upload Presets → Add (Unsigned)
+     ──────────────────────────────────────────────────────────────── */
+  window.CLOUDINARY_CLOUD_NAME    = "PASTE_YOUR_CLOUD_NAME";
+  window.CLOUDINARY_UPLOAD_PRESET = "PASTE_YOUR_UNSIGNED_PRESET";
+
+  /* ── Firebase init ───────────────────────────────────────────── */
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window._db = db;
+
+  /* ── Load posts ──────────────────────────────────────────────── */
+  async function loadPosts() {
+    const indicator = document.getElementById('load-indicator');
+    if (indicator) indicator.style.display = 'flex';
+    try {
+      const q    = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(30));
+      const snap = await getDocs(q);
+      const posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.renderPosts(posts);
+      if (indicator) indicator.style.display = 'none';
+    } catch(e) {
+      console.warn("Firebase not configured — showing demo posts.", e);
+      window.renderPosts(window.DEMO_POSTS);
+      if (indicator) indicator.style.display = 'none';
+      // Show setup banner if config is still placeholder
+      if (firebaseConfig.apiKey === "PASTE_YOUR_API_KEY_HERE") {
+        document.getElementById('setup-banner').style.display = 'flex';
+      }
+    }
+  }
+
+  /* ── Write post to Firestore ─────────────────────────────────── */
+  window.submitPost = async function(postData) {
+    try {
+      const docRef = await addDoc(collection(db, "posts"), {
+        ...postData,
+        createdAt : serverTimestamp(),
+        likes     : 0,
+        views     : 0
+      });
+      return { ok: true, id: docRef.id };
+    } catch(e) {
+      return { ok: false, error: e.message };
+    }
+  };
+
+  /* ── Increment like counter ──────────────────────────────────── */
+  window.likePost = async function(id) {
+    try {
+      await updateDoc(doc(db, "posts", id), { likes: increment(1) });
+      return { ok: true };
+    } catch(e) {
+      return { ok: false };
+    }
+  };
+
+  window.addEventListener("DOMContentLoaded", loadPosts);
+</script>
+
 <style>
-  
+:root {
+  --cream:#FFF5E6; --charcoal:#2D2D2D; --orange:#E8600A;
+  --teal:#1B8A8F; --red:#C0392B; --yellow:#F5C518;
+  --pink:#E8738A; --muted:#6B5B4E;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--cream);color:var(--charcoal);font-family:'Space Mono',monospace;overflow-x:hidden;}
+
+/* ── SETUP BANNER ─────────────────────────────────────────────── */
+#setup-banner{display:none;background:#FFF3CD;border-bottom:3px solid var(--yellow);
+  padding:.8rem 2rem;align-items:center;justify-content:space-between;
+  font-size:.7rem;color:#856404;gap:1rem;flex-wrap:wrap;position:sticky;top:56px;z-index:199;}
+#setup-banner strong{color:var(--orange);}
+#setup-banner a{color:var(--teal);text-decoration:underline;}
+.dismiss-banner{background:none;border:1px solid #856404;color:#856404;padding:.25rem .6rem;
+  font-family:'Space Mono',monospace;font-size:.6rem;cursor:pointer;}
+
+/* ── LOAD INDICATOR ───────────────────────────────────────────── */
+#load-indicator{display:flex;align-items:center;justify-content:center;
+  gap:.8rem;padding:3rem;color:var(--muted);font-size:.72rem;}
+.spinner{width:20px;height:20px;border:2px solid #ddd;border-top-color:var(--orange);
+  border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;
+  justify-content:space-between;padding:0 2rem;height:56px;
+  background:var(--charcoal);border-bottom:3px solid var(--orange);}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:2px;
+  display:flex;gap:4px;align-items:baseline;cursor:pointer;}
+.nav-logo .nl{color:#fff;} .nav-logo .na{color:var(--orange);font-size:1.1rem;} .nav-logo .nb{color:var(--yellow);}
+.nav-links{display:flex;gap:1.8rem;}
+.nav-links a{color:#bbb;text-decoration:none;font-size:.63rem;letter-spacing:2px;
+  text-transform:uppercase;transition:color .2s;cursor:pointer;}
+.nav-links a:hover{color:var(--orange);}
+.nav-cta{background:var(--orange);color:#fff;border:none;padding:.45rem 1.1rem;
+  font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:1px;cursor:pointer;transition:background .2s;}
+.nav-cta:hover{background:#c4510a;}
+
+/* HERO */
+.hero{min-height:100vh;padding-top:56px;display:grid;grid-template-columns:1fr 400px;
+  position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;left:0;top:56px;bottom:0;width:8px;background:var(--orange);}
+.hero-left{padding:4rem 3rem 3rem 3.5rem;display:flex;flex-direction:column;
+  justify-content:center;position:relative;z-index:2;}
+.hero-tag{display:inline-flex;align-items:center;gap:.5rem;background:var(--charcoal);
+  color:var(--teal);font-size:.62rem;letter-spacing:3px;text-transform:uppercase;
+  padding:.35rem .8rem;margin-bottom:2rem;width:fit-content;}
+.hero-tag::before{content:'';width:6px;height:6px;background:var(--teal);border-radius:50%;}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(4.5rem,10vw,8.5rem);
+  line-height:.92;letter-spacing:1px;margin-bottom:1.5rem;}
+.hero-title .r1{color:var(--charcoal);display:block;}
+.hero-title .amp{color:var(--orange);font-size:.65em;}
+.hero-title .tb{color:var(--teal);} .hero-title .tl{color:var(--red);}
+.hero-title .to{color:var(--yellow);} .hero-title .tg{color:var(--pink);}
+.hero-sub{font-family:'DM Serif Display',serif;font-style:italic;font-size:1.15rem;
+  color:var(--muted);max-width:400px;line-height:1.65;margin-bottom:2.5rem;}
+.hero-btns{display:flex;gap:1rem;flex-wrap:wrap;}
+.btn-p{background:var(--orange);color:#fff;padding:.85rem 2rem;font-family:'Space Mono',monospace;
+  font-size:.72rem;letter-spacing:1px;text-decoration:none;border:none;cursor:pointer;
+  transition:transform .15s,background .2s;display:inline-block;}
+.btn-p:hover{background:#c4510a;transform:translateY(-2px);}
+.btn-s{background:transparent;color:var(--charcoal);padding:.85rem 2rem;
+  font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:1px;
+  text-decoration:none;border:2px solid var(--charcoal);cursor:pointer;
+  transition:background .2s,color .2s;display:inline-block;}
+.btn-s:hover{background:var(--charcoal);color:#fff;}
+
+/* City blocks */
+.hero-right{position:relative;display:flex;align-items:flex-end;}
+.city{width:100%;height:100%;position:absolute;top:0;left:0;
+  display:flex;align-items:flex-end;gap:5px;padding:0 1rem;}
+.blk{flex-shrink:0;border-radius:2px 2px 0 0;animation:riseUp .8s cubic-bezier(.16,1,.3,1) both;}
+@keyframes riseUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.b1{width:36px;height:52%;background:var(--teal);animation-delay:.05s;}
+.b2{width:50px;height:75%;background:var(--orange);animation-delay:.1s;}
+.b3{width:28px;height:42%;background:var(--red);animation-delay:.15s;}
+.b4{width:58px;height:86%;background:var(--yellow);animation-delay:.2s;}
+.b5{width:32px;height:48%;background:var(--pink);animation-delay:.25s;}
+.b6{width:40px;height:65%;background:var(--charcoal);animation-delay:.3s;}
+.b7{width:34px;height:38%;background:var(--teal);animation-delay:.35s;}
+.b8{width:52px;height:70%;background:var(--orange);animation-delay:.4s;}
+.b9{width:26px;height:32%;background:var(--red);animation-delay:.45s;}
+.b10{width:44px;height:58%;background:var(--yellow);animation-delay:.5s;}
+.b11{width:30px;height:44%;background:var(--pink);animation-delay:.55s;}
+.ground{position:absolute;bottom:0;left:0;right:0;height:10px;background:var(--charcoal);}
+
+/* TICKER */
+.ticker{background:var(--charcoal);color:var(--yellow);font-size:.68rem;letter-spacing:2px;
+  text-transform:uppercase;padding:.55rem 0;overflow:hidden;white-space:nowrap;}
+.ticker-inner{display:inline-flex;gap:2.5rem;animation:tick 22s linear infinite;}
+@keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+.tsep{color:var(--orange);}
+
+/* CATEGORIES */
+.section{padding:4rem 3.5rem;}
+.sec-label{display:inline-flex;align-items:center;gap:.4rem;background:var(--charcoal);
+  color:var(--teal);font-size:.62rem;letter-spacing:3px;padding:.3rem .8rem;
+  text-transform:uppercase;margin-bottom:1.5rem;}
+.categories{background:var(--charcoal);}
+.categories h2{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#fff;margin-bottom:2rem;}
+.categories h2 span{color:var(--orange);}
+.cat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;}
+.cat-card{padding:1.8rem 1rem;cursor:pointer;transition:transform .2s;
+  position:relative;overflow:hidden;text-align:center;border-bottom:4px solid rgba(255,255,255,.2);}
+.cat-card:hover{transform:translateY(-6px);}
+.cat-card.c1{background:var(--red);} .cat-card.c2{background:var(--teal);}
+.cat-card.c3{background:var(--orange);} .cat-card.c4{background:var(--yellow);}
+.cat-card.c5{background:var(--pink);} .cat-card.c6{background:#3a3a3a;}
+.cat-icon{font-size:2rem;margin-bottom:.6rem;}
+.cat-name{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:#fff;}
+.cat-card.c4 .cat-name{color:var(--charcoal);}
+
+/* POSTS */
+.posts-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2.5rem;}
+.posts-header h2{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;}
+.posts-header h2 span{color:var(--orange);}
+.filter-bar{display:flex;gap:.5rem;flex-wrap:wrap;}
+.fbtn{background:transparent;border:1.5px solid #ccc;color:var(--muted);padding:.3rem .8rem;
+  font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:1px;cursor:pointer;transition:all .2s;}
+.fbtn:hover,.fbtn.active{background:var(--charcoal);border-color:var(--charcoal);color:#fff;}
+.posts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;}
+
+/* Post card */
+.post-card{background:#fff;border:2px solid transparent;cursor:pointer;
+  transition:transform .2s,border-color .2s;position:relative;overflow:hidden;}
+.post-card:hover{transform:translateY(-4px);border-color:var(--orange);}
+.post-card.featured{grid-column:1/3;}
+.post-thumb{width:100%;height:200px;object-fit:cover;display:block;}
+.post-card.featured .post-thumb{height:280px;}
+.post-ph{width:100%;height:200px;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+.post-card.featured .post-ph{height:280px;}
+.bg-story{background:linear-gradient(135deg,#C0392B22,#C0392B55);}
+.bg-movies{background:linear-gradient(135deg,#1B8A8F22,#1B8A8F55);}
+.bg-college{background:linear-gradient(135deg,#E8600A22,#E8600A55);}
+.bg-thoughts{background:linear-gradient(135deg,#88888822,#88888855);}
+.bg-books{background:linear-gradient(135deg,#E8738A22,#E8738A55);}
+.bg-news{background:linear-gradient(135deg,#F5C51822,#F5C51855);}
+.bg-other{background:linear-gradient(135deg,#2D2D2D22,#2D2D2D55);}
+.post-badge{position:absolute;top:.8rem;left:.8rem;font-size:.58rem;
+  letter-spacing:2px;text-transform:uppercase;padding:.22rem .6rem;color:#fff;}
+.badge-story{background:var(--red);} .badge-movies{background:var(--teal);}
+.badge-college{background:var(--orange);} .badge-thoughts{background:#888;}
+.badge-books{background:var(--pink);} .badge-news{background:var(--yellow);color:var(--charcoal)!important;}
+.badge-other{background:var(--charcoal);}
+.post-body{padding:1.2rem;}
+.post-title{font-family:'DM Serif Display',serif;font-size:1.05rem;
+  line-height:1.35;color:var(--charcoal);margin-bottom:.5rem;}
+.post-card.featured .post-title{font-size:1.4rem;}
+.post-exc{font-size:.7rem;color:var(--muted);line-height:1.7;margin-bottom:.8rem;}
+.post-meta{display:flex;justify-content:space-between;align-items:center;
+  font-size:.62rem;letter-spacing:1px;color:#aaa;text-transform:uppercase;
+  border-top:1px solid #eee;padding-top:.8rem;}
+.post-author{color:var(--orange);}
+.post-actions{display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap;}
+.sbtn{background:var(--charcoal);color:#fff;border:none;padding:.3rem .7rem;
+  font-size:.6rem;letter-spacing:1px;cursor:pointer;font-family:'Space Mono',monospace;transition:background .2s;}
+.sbtn:hover{background:var(--orange);}
+.sbtn.teal{background:var(--teal);}
+.sbtn.teal:hover{background:#136b70;}
+.sbtn.heart{background:transparent;border:1.5px solid #eee;color:var(--muted);}
+.sbtn.heart:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.sbtn.heart.liked{background:var(--red);border-color:var(--red);color:#fff;}
+.empty-state{grid-column:1/-1;text-align:center;padding:4rem;color:var(--muted);font-size:.8rem;}
+.empty-state .big{font-size:3rem;margin-bottom:1rem;}
+
+/* SUBMIT CTA */
+.submit-cta{margin:0 3.5rem 4rem;background:var(--charcoal);padding:3rem 3.5rem;
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:2rem;
+  position:relative;overflow:hidden;}
+.submit-cta::before{content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--orange);}
+.cta-title{font-family:'Bebas Neue',sans-serif;font-size:2.3rem;color:#fff;line-height:1.1;}
+.cta-title span{color:var(--yellow);}
+.cta-sub{font-size:.72rem;color:#aaa;margin-top:.4rem;line-height:1.7;}
+
+/* FOOTER */
+footer{background:var(--charcoal);border-top:4px solid var(--orange);padding:3rem 3.5rem;
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:3rem;}
+.flogo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:1px;}
+.flogo .fl{color:#fff;} .flogo .fa{color:var(--orange);} .flogo .fb{color:var(--yellow);}
+.ftagline{font-family:'DM Serif Display',serif;font-style:italic;color:#888;font-size:.88rem;margin:.5rem 0 .8rem;}
+.furl{font-size:.62rem;color:var(--teal);letter-spacing:2px;}
+.fcol h4{font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--orange);margin-bottom:1rem;}
+.fcol a{display:block;font-size:.72rem;color:#888;text-decoration:none;
+  margin-bottom:.5rem;cursor:pointer;transition:color .2s;}
+.fcol a:hover{color:#fff;}
+.fbuilt{font-size:.62rem;letter-spacing:1px;color:#555;line-height:2.2;}
+.fbuilt span{color:var(--teal);}
+
+/* ── WRITE OVERLAY ────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  display:none;align-items:flex-start;justify-content:center;padding:56px 1rem 1rem;overflow-y:auto;}
+.overlay.open{display:flex;}
+.write-panel{background:var(--cream);width:100%;max-width:780px;border-top:6px solid var(--orange);
+  position:relative;animation:slideDown .3s cubic-bezier(.16,1,.3,1);margin-bottom:2rem;}
+@keyframes slideDown{from{transform:translateY(-30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.wtopbar{background:var(--charcoal);color:#fff;padding:.8rem 1.5rem;
+  display:flex;justify-content:space-between;align-items:center;}
+.wtopbar .wlabel{font-size:.62rem;letter-spacing:3px;color:var(--teal);text-transform:uppercase;}
+.wtopbar .wstatus{font-size:.62rem;color:#888;}
+.closebtn{background:none;border:none;color:#aaa;font-size:1.4rem;cursor:pointer;transition:color .2s;}
+.closebtn:hover{color:#fff;}
+.wbody{padding:2rem;}
+.fgroup{margin-bottom:1.5rem;}
+.flabel{display:block;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:.5rem;}
+.finput,.fselect,.ftextarea{width:100%;background:#fff;border:2px solid #e0d5c9;outline:none;
+  padding:.75rem 1rem;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--charcoal);transition:border-color .2s;}
+.finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--orange);}
+.ftextarea{min-height:230px;resize:vertical;line-height:1.7;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+
+/* Image uploader */
+.img-drop{border:2px dashed #c8bdb2;padding:2rem;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;position:relative;}
+.img-drop:hover,.img-drop.drag{border-color:var(--orange);background:#fff8f0;}
+.img-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.drop-icon{font-size:2rem;margin-bottom:.5rem;}
+.drop-text{font-size:.72rem;color:var(--muted);}
+.drop-sub{font-size:.62rem;color:#bbb;margin-top:.3rem;}
+.img-preview{display:none;position:relative;margin-top:1rem;}
+.img-preview img{width:100%;max-height:220px;object-fit:cover;display:block;}
+.img-remove{position:absolute;top:.5rem;right:.5rem;background:var(--red);color:#fff;
+  border:none;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.9rem;
+  display:flex;align-items:center;justify-content:center;}
+.progress-wrap{height:5px;background:#eee;margin-top:.5rem;display:none;border-radius:2px;}
+.progress-bar{height:100%;background:var(--orange);width:0;transition:width .3s;border-radius:2px;}
+.upload-status{font-size:.62rem;color:var(--muted);margin-top:.35rem;display:none;
+  display:flex;align-items:center;gap:.4rem;}
+
+/* Tags */
+.tag-container{display:flex;flex-wrap:wrap;gap:.4rem;border:2px solid #e0d5c9;
+  padding:.5rem;min-height:48px;background:#fff;cursor:text;}
+.tag-container:focus-within{border-color:var(--orange);}
+.tag-chip{background:var(--charcoal);color:#fff;font-size:.62rem;padding:.25rem .6rem;
+  letter-spacing:1px;display:flex;align-items:center;gap:.4rem;}
+.tag-chip button{background:none;border:none;color:#aaa;cursor:pointer;font-size:.75rem;padding:0;line-height:1;}
+.tag-chip button:hover{color:var(--yellow);}
+.tag-input-field{border:none;outline:none;background:transparent;
+  font-family:'Space Mono',monospace;font-size:.75rem;flex:1;min-width:100px;}
+
+/* Submit row */
+.submit-row{display:flex;align-items:center;gap:1rem;padding:1.5rem 2rem;
+  background:#f5eedd;border-top:2px solid #e0d5c9;}
+.agree-label{font-size:.63rem;color:var(--muted);flex:1;line-height:1.5;
+  display:flex;align-items:flex-start;gap:.5rem;}
+.agree-label input{accent-color:var(--orange);margin-top:2px;flex-shrink:0;}
+.golive{background:var(--orange);color:#fff;border:none;padding:.85rem 2rem;
+  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;cursor:pointer;
+  transition:background .2s;white-space:nowrap;}
+.golive:hover{background:#c4510a;}
+.golive:disabled{background:#ccc;cursor:not-allowed;}
+
+/* SHARE MODAL */
+.share-modal{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);
+  display:none;align-items:center;justify-content:center;padding:1rem;}
+.share-modal.open{display:flex;}
+.share-box{background:var(--charcoal);width:100%;max-width:420px;padding:2rem;
+  border-top:5px solid var(--orange);animation:slideDown .25s ease;}
+.share-box h3{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;
+  margin-bottom:1.2rem;letter-spacing:1px;}
+.slink-row{display:flex;gap:.5rem;margin-bottom:1.2rem;}
+.slink-row input{flex:1;background:#1a1a1a;border:1px solid #444;color:#ccc;
+  padding:.6rem .8rem;font-family:'Space Mono',monospace;font-size:.63rem;outline:none;}
+.copybtn{background:var(--orange);color:#fff;border:none;padding:.6rem 1rem;
+  font-family:'Space Mono',monospace;font-size:.63rem;cursor:pointer;letter-spacing:1px;transition:background .2s;}
+.copybtn:hover{background:#c4510a;}
+.share-plats{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+.splat{border:none;padding:.75rem;font-family:'Space Mono',monospace;font-size:.63rem;
+  letter-spacing:1px;cursor:pointer;transition:opacity .2s;}
+.splat:hover{opacity:.85;}
+.sp-wa{background:#25D366;color:#fff;} .sp-tw{background:#1DA1F2;color:#fff;}
+.sp-tg{background:#0088CC;color:#fff;} .sp-cp{background:var(--teal);color:#fff;}
+.share-close{margin-top:1.2rem;width:100%;background:#444;color:#ccc;border:none;
+  padding:.6rem;font-family:'Space Mono',monospace;font-size:.63rem;cursor:pointer;transition:background .2s;}
+.share-close:hover{background:#555;}
+
+/* POST VIEW */
+.post-view{position:fixed;inset:0;z-index:700;background:var(--cream);overflow-y:auto;}
+.pv-nav{background:var(--charcoal);padding:1rem 2rem;display:flex;justify-content:space-between;
+  align-items:center;position:sticky;top:0;z-index:10;border-bottom:3px solid var(--orange);}
+.pv-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;}
+.pv-logo .l{color:#fff;} .pv-logo .a{color:var(--orange);} .pv-logo .b{color:var(--yellow);}
+.pv-close{background:none;border:none;color:#aaa;font-size:1.3rem;cursor:pointer;transition:color .2s;}
+.pv-close:hover{color:#fff;}
+.pv-content{max-width:720px;margin:0 auto;padding:3rem 2rem;}
+.pv-hero-img{width:100%;max-height:400px;object-fit:cover;display:block;}
+.pv-hero-ph{height:180px;display:flex;align-items:center;justify-content:center;font-size:5rem;}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:999;padding:1rem 1.5rem;
+  font-size:.73rem;letter-spacing:1px;transform:translateY(100px);opacity:0;
+  transition:transform .3s,opacity .3s;max-width:320px;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--teal);color:#fff;}
+.toast.error{background:var(--red);color:#fff;}
+
+/* FADE-UP */
+.fade-up{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease;}
+.fade-up.visible{opacity:1;transform:translateY(0);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;}.hero-right{display:none;}
+  .cat-grid{grid-template-columns:repeat(3,1fr);}
+  .posts-grid{grid-template-columns:1fr;}.post-card.featured{grid-column:auto;}
+  .submit-cta{grid-template-columns:1fr;}
+  footer{grid-template-columns:1fr;}
+  .frow{grid-template-columns:1fr;}
+  .nav-links{display:none;}
+}
 </style>
 </head>
 <body>
 
+<div class="toast" id="toast"></div>
+
+<!-- ⚠️ SETUP BANNER — appears automatically when Firebase isn't configured yet -->
+<div id="setup-banner">
+  <span>
+    <strong>⚙ Backend not connected yet.</strong>&nbsp;
+    Open the HTML file, fill in your
+    <a href="https://console.firebase.google.com" target="_blank">Firebase config</a> and
+    <a href="https://cloudinary.com/console" target="_blank">Cloudinary config</a>
+    at the top of the &lt;script type="module"&gt; block. Showing demo posts for now.
+  </span>
+  <button class="dismiss-banner" onclick="document.getElementById('setup-banner').style.display='none'">Got it ✕</button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="scrollTo(0,0)">
+    <span class="nl">LOG</span><span class="na">&</span><span class="nb">BLOG</span>
+  </div>
+  <div class="nav-links">
+    <a onclick="filterPosts('Story',null)">Stories</a>
+     <a href="movies.html">Movies</a>
+    <a onclick="filterPosts('Books',null)">Books</a>
+    <a onclick="filterPosts('College',null)">College</a>
+    <a onclick="filterPosts('Thoughts',null)">Thoughts</a>
+  </div>
+  <button class="nav-cta" onclick="openWrite()">Pin your story →</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">EST. 2025 · GUWAHATI, ASSAM</div>
+    <h1 class="hero-title">
+      <span class="r1">LOG</span>
+      <span class="r1"><span class="amp">&</span> <span class="tb">B</span><span class="tl">L</span><span class="to">O</span><span class="tg">G</span></span>
+    </h1>
+    <p class="hero-sub">College life, random thoughts, movie reviews, stories we had to write down. This is our open notebook. You're welcome here.</p>
+    <div class="hero-btns">
+      <button class="btn-p" onclick="document.getElementById('posts-sec').scrollIntoView({behavior:'smooth'})">Start reading →</button>
+      <button class="btn-s" onclick="openWrite()">Share your story</button>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="city">
+      <div class="blk b1"></div><div class="blk b2"></div><div class="blk b3"></div>
+      <div class="blk b4"></div><div class="blk b5"></div><div class="blk b6"></div>
+      <div class="blk b7"></div><div class="blk b8"></div><div class="blk b9"></div>
+      <div class="blk b10"></div><div class="blk b11"></div>
+    </div>
+    <div class="ground"></div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span>STORIES</span><span class="tsep">✦</span><span>MOVIE REVIEWS</span><span class="tsep">✦</span>
+    <span>COLLEGE LIFE</span><span class="tsep">✦</span><span>HONEST WRITING</span><span class="tsep">✦</span>
+    <span>ZERO PRESSURE</span><span class="tsep">✦</span><span>BOOKS</span><span class="tsep">✦</span>
+    <span>THOUGHTS AT 3AM</span><span class="tsep">✦</span><span>LOGANDBLOG.COM</span><span class="tsep">✦</span>
+    <span>STORIES</span><span class="tsep">✦</span><span>MOVIE REVIEWS</span><span class="tsep">✦</span>
+    <span>COLLEGE LIFE</span><span class="tsep">✦</span><span>HONEST WRITING</span><span class="tsep">✦</span>
+    <span>ZERO PRESSURE</span><span class="tsep">✦</span><span>BOOKS</span><span class="tsep">✦</span>
+    <span>THOUGHTS AT 3AM</span><span class="tsep">✦</span><span>LOGANDBLOG.COM</span><span class="tsep">✦</span>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<section class="section categories fade-up">
+  <div class="sec-label">// WHAT WE WRITE ABOUT</div>
+  <h2>Browse by <span>category</span></h2>
+  <div class="cat-grid">
+    <div class="cat-card c1" onclick="filterPosts('Story',null)"><div class="cat-icon">📖</div><div class="cat-name">Stories</div></div>
+    <div class="cat-card c2" onclick="filterPosts('Movies',null)"><div class="cat-icon">🎬</div><div class="cat-name">Movies</div></div>
+    <div class="cat-card c3" onclick="filterPosts('Books',null)"><div class="cat-icon">📚</div><div class="cat-name">Books</div></div>
+    <div class="cat-card c4" onclick="filterPosts('Thoughts',null)"><div class="cat-icon">💭</div><div class="cat-name">Thoughts</div></div>
+    <div class="cat-card c5" onclick="filterPosts('College',null)"><div class="cat-icon">🏫</div><div class="cat-name">College</div></div>
+    <div class="cat-card c6" onclick="filterPosts('News',null)"><div class="cat-icon">📰</div><div class="cat-name">News</div></div>
+  </div>
+</section>
+
+<!-- POSTS -->
+<section class="section fade-up" id="posts-sec">
+  <div class="posts-header">
+    <h2>Latest <span>posts</span></h2>
+    <div class="filter-bar">
+      <button class="fbtn active" onclick="filterPosts('all',this)">All</button>
+      <button class="fbtn" onclick="filterPosts('Story',this)">Stories</button>
+      <button class="fbtn" onclick="filterPosts('Movies',this)">Movies</button>
+      <button class="fbtn" onclick="filterPosts('Books',this)">Books</button>
+      <button class="fbtn" onclick="filterPosts('College',this)">College</button>
+      <button class="fbtn" onclick="filterPosts('Thoughts',this)">Thoughts</button>
+    </div>
+  </div>
+  <div class="posts-grid" id="posts-grid">
+    <div class="empty-state" id="load-indicator">
+      <div class="spinner"></div><div>Loading posts…</div>
+    </div>
+  </div>
+</section>
+
+<!-- SUBMIT CTA -->
+<div class="submit-cta fade-up">
+  <div>
+    <div class="cta-title">Got a story? <span>Pin it.</span></div>
+    <p class="cta-sub">Something you've been meaning to say. Something that happened at 3am. Something you felt so hard you had to write it down. This is the place — no login needed.</p>
+  </div>
+  <button class="btn-p" onclick="openWrite()" style="white-space:nowrap;padding:1rem 2rem">Pin your story →</button>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="flogo"><span class="fl">LOG </span><span class="fa">& </span><span class="fb">BLOG</span></div>
+    <div class="ftagline">Not perfect, not planned — just honest.</div>
+    <div class="furl">logandblog.com</div>
+  </div>
+  <div class="fcol">
+    <h4>Explore</h4>
+    <a onclick="filterPosts('Story',null)">Stories</a>
+    <a onclick="filterPosts('Movies',null)">Movies</a>
+    <a onclick="filterPosts('Books',null)">Books</a>
+    <a onclick="filterPosts('College',null)">College</a>
+    <a onclick="filterPosts('News',null)">News</a>
+    <a onclick="openWrite()">Submit a Story</a>
+  </div>
+  <div class="fbuilt fcol">
+    <h4>Built with</h4>
+    <span>HTML · CSS · JS</span><br>
+    <span>Firebase Firestore</span><br>
+    <span>Cloudinary (images)</span><br>
+    <span>Firebase Hosting</span><br><br>
+    <span style="color:#444">Made for Webathon 2025</span><br>
+    <span style="color:#333">© 2025 Log &amp; Blog — Guwahati</span>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════
+     WRITE OVERLAY
+═══════════════════════════════════════════════════════ -->
+<div class="overlay" id="write-overlay">
+  <div class="write-panel">
+    <div class="wtopbar">
+      <div>
+        <div class="wlabel">// PIN YOUR STORY</div>
+        <div class="wstatus" id="w-status">unsaved</div>
+      </div>
+      <button class="closebtn" onclick="closeWrite()">✕</button>
+    </div>
+    <div class="wbody">
+      <div class="fgroup">
+        <label class="flabel">Title *</label>
+        <input class="finput" id="f-title" type="text" placeholder="Give your story a title…" maxlength="120">
+      </div>
+      <div class="frow">
+        <div class="fgroup">
+          <label class="flabel">Your name *</label>
+          <input class="finput" id="f-author" type="text" placeholder="Pawan / Anonymous">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Read time</label>
+          <input class="finput" id="f-readtime" type="text" placeholder="e.g. 5 min read">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fgroup">
+          <label class="flabel">Category *</label>
+          <select class="fselect" id="f-category">
+            <option value="">— choose —</option>
+            <option value="Story">📖 Story</option>
+            <option value="Movies">🎬 Movies</option>
+            <option value="Books">📚 Books</option>
+            <option value="Thoughts">💭 Thoughts</option>
+            <option value="College">🏫 College</option>
+            <option value="News">📰 News</option>
+            <option value="Other">✨ Other</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Mood emoji (optional)</label>
+          <input class="finput" id="f-mood" type="text" placeholder="😊 or leave blank" maxlength="4">
+        </div>
+      </div>
+
+      <!-- Cover image — uploaded directly to Cloudinary from the browser -->
+      <div class="fgroup">
+        <label class="flabel">Cover image — stored on Cloudinary CDN</label>
+        <div class="img-drop" id="img-drop"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="handleDrop(event)">
+          <input type="file" accept="image/*" id="img-file" onchange="handleImgSelect(this)">
+          <div class="drop-icon">📷</div>
+          <div class="drop-text">Drag an image here or click to choose</div>
+          <div class="drop-sub">JPG · PNG · WEBP · max 8MB</div>
+        </div>
+        <div class="progress-wrap" id="prog-wrap">
+          <div class="progress-bar" id="prog-bar"></div>
+        </div>
+        <div id="upload-status-text" style="font-size:.62rem;color:var(--muted);margin-top:.35rem;display:none"></div>
+        <div class="img-preview" id="img-preview">
+          <img id="img-prev-src" src="" alt="preview">
+          <button class="img-remove" onclick="removeImage()">✕</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="fgroup">
+        <label class="flabel">Your story *</label>
+        <textarea class="ftextarea" id="f-body"
+          placeholder="Write anything. College days, 3am thoughts, a movie you just watched, a story you've been carrying…"
+          oninput="onBodyInput(this)"></textarea>
+        <div style="font-size:.6rem;color:#aaa;margin-top:.3rem" id="word-count">0 words</div>
+      </div>
+
+      <!-- Tags -->
+      <div class="fgroup">
+        <label class="flabel">Tags — press Enter to add (max 6)</label>
+        <div class="tag-container" id="tag-container" onclick="document.getElementById('tag-field').focus()">
+          <input class="tag-input-field" id="tag-field" placeholder="add a tag…" onkeydown="handleTag(event)">
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <label class="agree-label">
+        <input type="checkbox" id="f-agree">
+        This is my original content and I'm okay with it going live on Log &amp; Blog right now.
+        I have rights to all images included.
+      </label>
+      <button class="golive" id="golive-btn" onclick="submitStory()">Go Live ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SHARE MODAL
+═══════════════════════════════════════════════════════ -->
+<div class="share-modal" id="share-modal">
+  <div class="share-box">
+    <h3>Share this story</h3>
+    <div class="slink-row">
+      <input type="text" id="share-link-input" readonly>
+      <button class="copybtn" onclick="copyLink()">Copy</button>
+    </div>
+    <div class="share-plats">
+      <button class="splat sp-wa" onclick="shareVia('whatsapp')">📱 WhatsApp</button>
+      <button class="splat sp-tw" onclick="shareVia('twitter')">🐦 Twitter / X</button>
+      <button class="splat sp-tg" onclick="shareVia('telegram')">✈️ Telegram</button>
+      <button class="splat sp-cp" onclick="copyLink()">🔗 Copy link</button>
+    </div>
+    <button class="share-close" onclick="closeShare()">Close</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════ -->
+<script>
+/* ── DEMO POSTS (shown when Firebase not configured) ─────────── */
+window.DEMO_POSTS = [
+  { id:"d1", title:"Do I Like Them or Love Them?", author:"Pawan", category:"Story",
+    body:"You know that weird feeling when you're talking to someone and your brain is like \"I like them so much\", but your heart whispers \"bro… is this love?\" That confusion is real and I had to write it down. Maybe you've felt it too — that tension between comfort and something bigger, something scarier. This is me trying to make sense of it.",
+    excerpt:"That weird tension between liking someone and something bigger, scarier.",
+    coverUrl:"", readTime:"6–7 min", tags:["love","college","feelings"],
+    likes:12, createdAt:{seconds:Date.now()/1000-3600}},
+  { id:"d2", title:"Some Lessons I've Learned Till Now 🧠", author:"Pawan", category:"College",
+    body:"I'm here again with some interesting (or boring, depends on how you see it) stories about growing up. Who here thinks, \"Yeah, I'm mature\"? College teaches you things no syllabus ever covers.",
+    excerpt:"Things I wish someone told me earlier about college and life.",
+    coverUrl:"", readTime:"6–8 min", tags:["growth","college","lessons"],
+    likes:8, createdAt:{seconds:Date.now()/1000-7200}},
+  { id:"d3", title:"Films that hit different at 2am", author:"Suvam", category:"Movies",
+    body:"Some movies are meant for late nights. The kind you watch alone with headphones, lights off. Here's my list of films that completely changed how I see things.",
+    excerpt:"A curated list of movies meant for late nights and quiet moments.",
+    coverUrl:"", readTime:"4 min", tags:["movies","night","watchlist"],
+    likes:24, createdAt:{seconds:Date.now()/1000-10800}},
+  { id:"d4", title:"Things I wish someone told me in first year", author:"Niraj", category:"Thoughts",
+    body:"A thread of small but important things about college no one talks about — roommates, mess food, and 8am classes you'll never make it to.",
+    excerpt:"Small but important things about college no one talks about.",
+    coverUrl:"", readTime:"5 min", tags:["freshman","advice","college"],
+    likes:6, createdAt:{seconds:Date.now()/1000-14400}},
+  { id:"d5", title:"Why 'Stardust' is an underrated masterpiece", author:"Priyanshu", category:"Books",
+    body:"Neil Gaiman's Stardust is everything a fantasy should be — whimsical, dark, and genuinely moving. Here's why more people should read it.",
+    excerpt:"Neil Gaiman's Stardust is everything fantasy should be.",
+    coverUrl:"", readTime:"3 min", tags:["books","fantasy","neil-gaiman"],
+    likes:15, createdAt:{seconds:Date.now()/1000-18000}},
+  { id:"d6", title:"Campus roundup: what's happening this semester", author:"Suvam", category:"News",
+    body:"Quick roundup of things happening on campus — events, changes, and what to look out for this semester.",
+    excerpt:"Quick roundup of events and changes on campus.",
+    coverUrl:"", readTime:"2 min", tags:["campus","news","update"],
+    likes:3, createdAt:{seconds:Date.now()/1000-21600}}
+];
+
+/* ── STATE ───────────────────────────────────────────────────── */
+let allPosts = [], currentFilter = 'all';
+let uploadedCoverUrl = '', currentTags = [];
+const likedPosts = new Set(JSON.parse(localStorage.getItem('lb_liked')||'[]'));
+
+/* ── RENDER ──────────────────────────────────────────────────── */
+window.renderPosts = function(posts){
+  allPosts = posts;
+  displayPosts(posts);
+};
+
+function displayPosts(posts){
+  const g = document.getElementById('posts-grid');
+  if (!posts || posts.length === 0) {
+    g.innerHTML = `<div class="empty-state"><div class="big">📭</div><div>No posts yet — be the first to pin a story!</div></div>`;
+    return;
+  }
+  g.innerHTML = posts.map((p, i) => {
+    const cat  = (p.category||'other').toLowerCase();
+    const date = p.createdAt?.seconds
+      ? new Date(p.createdAt.seconds*1000).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})
+      : 'Recently';
+    const exc  = p.excerpt || (p.body||'').slice(0,140)+'…';
+    const tags = (p.tags||[]).slice(0,3).map(t=>`<span style="font-size:.57rem;color:var(--teal)">#${t}</span>`).join(' ');
+    const feat = i === 0 ? 'featured' : '';
+    const imgH = feat ? '280px' : '200px';
+    const liked = likedPosts.has(p.id);
+    const thumb = p.coverUrl
+      ? `<img class="post-thumb" style="height:${imgH}" src="${p.coverUrl}" alt="${h(p.title)}" loading="lazy">`
+      : `<div class="post-ph bg-${cat}" style="height:${imgH}">${cEmoji(p.category)}</div>`;
+
+    return `
+    <div class="post-card ${feat}" onclick="openPost('${p.id}')">
+      <div style="position:relative">${thumb}
+        <span class="post-badge badge-${cat}">${p.category||'Story'}</span>
+      </div>
+      <div class="post-body">
+        <div class="post-title">${h(p.title)}</div>
+        <p class="post-exc">${h(exc)}</p>
+        <div style="margin-bottom:.5rem">${tags}</div>
+        <div class="post-meta">
+          <span class="post-author">By ${h(p.author||'Anonymous')}</span>
+          <span>${p.readTime||''} · ${date}</span>
+        </div>
+        <div class="post-actions" onclick="event.stopPropagation()">
+          <button class="sbtn heart ${liked?'liked':''}" id="like-${p.id}"
+            onclick="handleLike('${p.id}',this)">
+            ${liked?'❤️':'🤍'} ${p.likes||0}
+          </button>
+          <button class="sbtn teal" onclick="openShare('${p.id}','${enc(p.title)}')">🔗 Share</button>
+          <button class="sbtn" onclick="waShare('${enc(p.title)}','${p.id}')">📱 WhatsApp</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cEmoji(c){return{Story:'📖',Movies:'🎬',Books:'📚',Thoughts:'💭',College:'🏫',News:'📰'}[c]||'✨';}
+function h(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function enc(s){return encodeURIComponent(String(s||''));}
+
+/* ── LIKES ───────────────────────────────────────────────────── */
+window.handleLike = async function(id, btn) {
+  if (likedPosts.has(id)) return; // one like per session
+  likedPosts.add(id);
+  localStorage.setItem('lb_liked', JSON.stringify([...likedPosts]));
+  // Optimistic UI
+  const post = allPosts.find(p => p.id === id);
+  if (post) { post.likes = (post.likes||0)+1; }
+  btn.innerHTML = `❤️ ${(post?.likes)||1}`;
+  btn.classList.add('liked');
+  // Persist to Firestore
+  if (window.likePost && !id.startsWith('d')) {
+    await window.likePost(id);
+  }
+};
+
+/* ── FILTER ──────────────────────────────────────────────────── */
+window.filterPosts = function(cat, btn){
+  currentFilter = cat;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const filtered = cat === 'all'
+    ? allPosts
+    : allPosts.filter(p => (p.category||'').toLowerCase() === cat.toLowerCase());
+  displayPosts(filtered);
+  document.getElementById('posts-sec').scrollIntoView({behavior:'smooth'});
+};
+
+/* ── OPEN POST VIEW ──────────────────────────────────────────── */
+window.openPost = function(id){
+  const p = allPosts.find(x => x.id === id);
+  if (!p) return;
+  const cat = (p.category||'other').toLowerCase();
+  const liked = likedPosts.has(p.id);
+  const el  = document.createElement('div');
+  el.className = 'post-view';
+  el.setAttribute('data-pv','');
+  el.innerHTML = `
+    <div class="pv-nav">
+      <div class="pv-logo"><span class="l">LOG </span><span class="a">& </span><span class="b">BLOG</span></div>
+      <button class="pv-close" onclick="document.querySelector('[data-pv]').remove();history.back()">✕ Close</button>
+    </div>
+    ${p.coverUrl
+      ? `<img class="pv-hero-img" src="${p.coverUrl}" alt="${h(p.title)}">`
+      : `<div class="pv-hero-ph bg-${cat}">${cEmoji(p.category)}</div>`}
+    <div class="pv-content">
+      <span style="background:var(--${catColor(p.category)});color:#fff;font-size:.58rem;letter-spacing:2px;padding:.22rem .6rem;text-transform:uppercase">${p.category||'Story'}</span>
+      <h1 style="font-family:'DM Serif Display',serif;font-size:2.4rem;margin:1rem 0 .5rem;line-height:1.2">${h(p.title)}</h1>
+      <div style="font-size:.68rem;color:var(--muted);margin-bottom:2rem;letter-spacing:1px">
+        By <span style="color:var(--orange)">${h(p.author||'Anonymous')}</span>
+        · ${p.readTime||''}
+        ${p.mood ? ' · '+p.mood : ''}
+        · ❤️ ${p.likes||0} likes
+      </div>
+      <div style="font-family:'DM Serif Display',serif;font-size:1.1rem;line-height:1.9;color:var(--charcoal);white-space:pre-wrap">${h(p.body||'')}</div>
+      ${(p.tags||[]).length
+        ? `<div style="margin-top:2rem;display:flex;gap:.5rem;flex-wrap:wrap">${(p.tags).map(t=>`<span style="background:var(--charcoal);color:var(--teal);font-size:.6rem;padding:.22rem .6rem">#${h(t)}</span>`).join('')}</div>`
+        : ''}
+      <div style="margin-top:2.5rem;display:flex;gap:1rem;flex-wrap:wrap">
+        <button class="sbtn heart ${liked?'liked':''}" id="pv-like-${p.id}"
+          onclick="handleLike('${p.id}',this)">
+          ${liked?'❤️':'🤍'} ${p.likes||0}
+        </button>
+        <button class="sbtn teal" onclick="openShare('${p.id}','${enc(p.title)}')">🔗 Share this story</button>
+        <button class="sbtn" onclick="waShare('${enc(p.title)}','${p.id}')">📱 WhatsApp</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  history.pushState(null,'','#post/'+p.id);
+};
+
+function catColor(c){
+  return {Story:'red',Movies:'teal',College:'orange',Thoughts:'charcoal',Books:'pink',News:'yellow'}[c]||'charcoal';
+}
+
+/* ── WRITE OVERLAY ───────────────────────────────────────────── */
+window.openWrite  = () => { document.getElementById('write-overlay').classList.add('open'); document.body.style.overflow='hidden'; };
+window.closeWrite = () => { document.getElementById('write-overlay').classList.remove('open'); document.body.style.overflow=''; };
+
+/* ── CLOUDINARY UPLOAD (direct from browser) ─────────────────── */
+window.handleDrop = function(e){
+  e.preventDefault();
+  document.getElementById('img-drop').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) uploadToCloudinary(f);
+};
+window.handleImgSelect = function(input){
+  if (input.files[0]) uploadToCloudinary(input.files[0]);
+};
+
+async function uploadToCloudinary(file) {
+  if (file.size > 8*1024*1024) { showToast('Image too large — max 8MB','error'); return; }
+
+  const cloudName   = window.CLOUDINARY_CLOUD_NAME;
+  const uploadPreset= window.CLOUDINARY_UPLOAD_PRESET;
+
+  // Fallback: local preview only when Cloudinary isn't configured
+  if (cloudName === "PASTE_YOUR_CLOUD_NAME") {
+    const url = URL.createObjectURL(file);
+    showImgPreview(url);
+    uploadedCoverUrl = url;   // will NOT persist across sessions; configure Cloudinary to fix
+    showToast('⚠ Cloudinary not configured — local preview only','error');
+    return;
+  }
+
+  const pw = document.getElementById('prog-wrap');
+  const pb = document.getElementById('prog-bar');
+  const st = document.getElementById('upload-status-text');
+
+  pw.style.display = 'block';
+  st.style.display = 'block';
+  st.textContent   = '⏳ Uploading to Cloudinary…';
+  pb.style.width   = '10%';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', uploadPreset);
+  fd.append('folder', 'logandblog');       // organises uploads in one folder
+  fd.append('resource_type', 'image');
+
+  try {
+    // Fake progress while we wait
+    let pct = 10;
+    const ticker = setInterval(() => { pct = Math.min(pct+10, 85); pb.style.width = pct+'%'; }, 400);
+
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: fd
+    });
+    clearInterval(ticker);
+    pb.style.width = '100%';
+
+    if (!res.ok) throw new Error('HTTP '+res.status);
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    uploadedCoverUrl = data.secure_url;   // ← this is what gets saved to Firestore
+    showImgPreview(uploadedCoverUrl);
+    st.textContent = '✅ Uploaded to Cloudinary · ' + Math.round(file.size/1024) + 'KB';
+    showToast('📸 Image uploaded!','success');
+  } catch(e) {
+    st.textContent = '❌ Upload failed: ' + e.message;
+    showToast('Upload failed: '+e.message,'error');
+  } finally {
+    setTimeout(() => { pw.style.display='none'; pb.style.width='0'; }, 1200);
+  }
+}
+
+function showImgPreview(url){
+  document.getElementById('img-prev-src').src = url;
+  document.getElementById('img-preview').style.display = 'block';
+  document.getElementById('img-drop').style.display = 'none';
+}
+window.removeImage = function(){
+  uploadedCoverUrl = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-drop').style.display = 'block';
+  document.getElementById('img-file').value = '';
+  document.getElementById('upload-status-text').style.display = 'none';
+};
+
+/* ── TAGS ────────────────────────────────────────────────────── */
+window.handleTag = function(e){
+  if ((e.key === 'Enter' || e.key === ',') && !e.shiftKey) {
+    e.preventDefault();
+    const v = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+    if (v && !currentTags.includes(v) && currentTags.length < 6) {
+      currentTags.push(v);
+      renderTags();
+    }
+    e.target.value = '';
+  }
+  if (e.key === 'Backspace' && e.target.value === '' && currentTags.length > 0) {
+    currentTags.pop();
+    renderTags();
+  }
+};
+function renderTags(){
+  const c = document.getElementById('tag-container');
+  const f = document.getElementById('tag-field');
+  c.querySelectorAll('.tag-chip').forEach(x => x.remove());
+  currentTags.forEach((tag, i) => {
+    const ch = document.createElement('div');
+    ch.className = 'tag-chip';
+    ch.innerHTML = `${tag}<button onclick="removeTag(${i})">✕</button>`;
+    c.insertBefore(ch, f);
+  });
+}
+window.removeTag = function(i){ currentTags.splice(i,1); renderTags(); };
+
+/* ── WORD COUNT ──────────────────────────────────────────────── */
+window.onBodyInput = function(el){
+  const w = el.value.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('word-count').textContent = w + ' words';
+  document.getElementById('w-status').textContent = w > 0 ? 'unsaved ●' : 'unsaved';
+};
+
+/* ── SUBMIT TO FIRESTORE ─────────────────────────────────────── */
+window.submitStory = async function(){
+  const title    = document.getElementById('f-title').value.trim();
+  const author   = document.getElementById('f-author').value.trim();
+  const category = document.getElementById('f-category').value;
+  const body     = document.getElementById('f-body').value.trim();
+  const readTime = document.getElementById('f-readtime').value.trim();
+  const mood     = document.getElementById('f-mood').value.trim();
+  const agreed   = document.getElementById('f-agree').checked;
+
+  if (!title)   { showToast('Please add a title','error'); return; }
+  if (!author)  { showToast('Please add your name','error'); return; }
+  if (!category){ showToast('Please choose a category','error'); return; }
+  if (!body || body.split(/\s+/).length < 15) { showToast('Story is too short (min 15 words)','error'); return; }
+  if (!agreed)  { showToast('Please check the agreement box','error'); return; }
+
+  const btn = document.getElementById('golive-btn');
+  btn.disabled = true;
+  btn.textContent = 'Publishing…';
+
+  const words    = body.trim().split(/\s+/).length;
+  const postData = {
+    title,
+    author,
+    category,
+    body,
+    excerpt : body.slice(0,150)+'…',
+    coverUrl: uploadedCoverUrl || '',  // Cloudinary URL or '' if no image
+    readTime: readTime || Math.ceil(words/200)+' min read',
+    mood    : mood || '',
+    tags    : [...currentTags],
+  };
+
+  // window.submitPost is defined in the Firebase module above
+  const result = await window.submitPost(postData);
+
+  if (result.ok) {
+    showToast('🎉 Story pinned! It\'s live.','success');
+    btn.textContent = '✅ Published!';
+    document.getElementById('w-status').textContent = 'published ✓';
+    // Optimistic prepend so user sees their post immediately
+    const newPost = { ...postData, id: result.id||'new-'+Date.now(), createdAt:{seconds:Date.now()/1000}, likes:0 };
+    allPosts.unshift(newPost);
+    displayPosts(allPosts);
+    setTimeout(() => { closeWrite(); resetForm(); btn.disabled=false; btn.textContent='Go Live ✦'; }, 1800);
+  } else {
+    showToast('Failed: '+(result.error||'unknown error'),'error');
+    btn.disabled = false;
+    btn.textContent = 'Go Live ✦';
+  }
+};
+
+function resetForm(){
+  ['f-title','f-author','f-readtime','f-mood','f-body','tag-field'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-category').value = '';
+  document.getElementById('f-agree').checked = false;
+  document.getElementById('w-status').textContent = 'unsaved';
+  document.getElementById('word-count').textContent = '0 words';
+  currentTags = [];
+  renderTags();
+  removeImage();
+  uploadedCoverUrl = '';
+}
+
+/* ── SHARE ───────────────────────────────────────────────────── */
+window.openShare = function(id, titleEnc){
+  const url = location.origin + location.pathname + '#post/' + id;
+  document.getElementById('share-link-input').value = url;
+  document.getElementById('share-modal').classList.add('open');
+  document.getElementById('share-modal').dataset.id = id;
+  document.getElementById('share-modal').dataset.title = titleEnc;
+};
+window.closeShare = () => document.getElementById('share-modal').classList.remove('open');
+
+window.copyLink = function(){
+  const v = document.getElementById('share-link-input').value;
+  navigator.clipboard.writeText(v).then(() => { showToast('🔗 Link copied!','success'); closeShare(); });
+};
+
+window.shareVia = function(plat){
+  const url = enc(document.getElementById('share-link-input').value);
+  const txt = enc('Check out this story on Log & Blog!');
+  const links = {
+    whatsapp: `https://wa.me/?text=${txt}%20${url}`,
+    twitter : `https://twitter.com/intent/tweet?text=${txt}&url=${url}`,
+    telegram: `https://t.me/share/url?url=${url}&text=${txt}`
+  };
+  if (links[plat]) window.open(links[plat],'_blank');
+  else copyLink();
+  closeShare();
+};
+
+window.waShare = function(titleEnc, id){
+  const url  = location.origin + location.pathname + '#post/' + id;
+  const text = enc('Check out "'+decodeURIComponent(titleEnc)+'" on Log & Blog: '+url);
+  window.open('https://wa.me/?text='+text, '_blank');
+};
+
+/* ── TOAST ───────────────────────────────────────────────────── */
+let _tt;
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast '+type+' show';
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ── SCROLL ANIMATIONS ───────────────────────────────────────── */
+const obs = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+}), {threshold:.08});
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+
+/* ── CLOSE ON BACKDROP CLICK ─────────────────────────────────── */
+document.getElementById('write-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeWrite(); });
+document.getElementById('share-modal').addEventListener('click',  e => { if (e.target === e.currentTarget) closeShare(); });
+
+/* ── HASH ROUTING ────────────────────────────────────────────── */
+window.addEventListener('popstate', () => {
+  if (!location.hash.startsWith('#post/')) document.querySelector('[data-pv]')?.remove();
+});
+if (location.hash.startsWith('#post/')) {
+  const id = location.hash.slice(6);
+  setTimeout(() => { const p = allPosts.find(x => x.id === id); if (p) openPost(p.id); }, 900);
+}
+</script>
 </body>
 </html>
